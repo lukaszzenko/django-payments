@@ -10,7 +10,7 @@ try:
 except ImportError:
     from mock import MagicMock
 
-from payments import RedirectNeeded, PaymentError
+from .. import RedirectNeeded, PaymentError
 
 from . import DummyProvider
 
