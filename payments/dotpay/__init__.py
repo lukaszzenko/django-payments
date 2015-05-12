@@ -21,8 +21,6 @@ class DotpayProvider(BasicProvider):
         UI language
     lock:
         whether to disable channels other than the default selected above
-    onlinetransfer:
-        whether to disable channels, which does not support instant payments
     '''
     _method = 'post'
 
@@ -34,7 +32,6 @@ class DotpayProvider(BasicProvider):
         self.channel = kwargs.pop('channel', 0)
         self.lang = kwargs.pop('lang', 'pl')
         self.lock = kwargs.pop('lock', False)
-        self.onlinetransfer = kwargs.pop('onlinetransfer', True)
         super(DotpayProvider, self).__init__(*args, **kwargs)
         if not self._capture:
             raise ImproperlyConfigured(
@@ -57,7 +54,6 @@ class DotpayProvider(BasicProvider):
             'lang': self.lang,
             'channel': str(self.channel),
             'ch_lock': '1' if self.lock else '0',
-            'onlinetransfer': '1' if self.onlinetransfer else '0',
             'URL': self.payment.get_success_url(),
             'URLC': self.get_return_url(),
             'type': '1'
