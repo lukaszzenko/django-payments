@@ -8,13 +8,19 @@ from ..forms import PaymentForm
 
 
 class BraintreePaymentForm(PaymentForm):
-    nonce = forms.CharField()
-    token = forms.CharField()
+    nonce = forms.CharField(required=False)
+    token = forms.CharField(required=False)
 
     transaction_id = None
 
+    def __init__(self, customer_id, *args, **kwargs):
+        super(BraintreePaymentForm, self).__init__(*args, **kwargs)
+        self.customer_id = customer_id
+
     def clean_nonce(self):
         nonce = self.cleaned_data['nonce']
+        if not nonce:
+            return nonce
         result = braintree.PaymentMethod.create({
             "customer_id": self.customer_id,
             "payment_method_nonce": nonce,
@@ -23,27 +29,33 @@ class BraintreePaymentForm(PaymentForm):
             }
         })
         if not result.is_success:
-            raise forms.ValidationError(result.message)
-        self.cleaned_data['payment_method'] = result.payment_method
+            self._errors['nonce'] = self.error_class([result.message])
+        else:
+            self.cleaned_data['payment_method'] = result.payment_method
         return nonce
 
     def clean_token(self):
         token = self.cleaned_data['token']
+        if not token:
+            return token
         try:
             self.cleaned_data['payment_method'] = braintree.PaymentMethod.find(
                 token)
         except braintree.exceptions.not_found_error.NotFoundError, e:
-            raise forms.ValidationError(unicode(e))
+            self._errors['token'] = self.error_class([unicode(e)])
         return token
 
     def clean(self):
-        data = self.cleaned_data
+        cleaned_data = super(BraintreePaymentForm, self).clean()
+
+        if not self.errors and 'payment_method' not in cleaned_data:
+            self._errors['__all__'] = self.error_class([
+                'Cannot deduce payment method.'])
 
         if not self.errors and not self.payment.transaction_id:
             result = braintree.Transaction.sale({
                 'amount': str(self.payment.total),
-                'payment_method_token':
-                self.cleaned_data['payment_method'].token,
+                'payment_method_token': cleaned_data['payment_method'].token,
                 'billing': self.get_billing_data(),
                 'options': {
                     'submit_for_settlement': True
@@ -56,8 +68,7 @@ class BraintreePaymentForm(PaymentForm):
             else:
                 self._errors['__all__'] = self.error_class([result.message])
                 self.payment.change_status('error')
-
-        return data
+        return cleaned_data
 
     def get_billing_data(self):
         return {

@@ -13,8 +13,7 @@ class BraintreeProvider(BasicProvider):
         self.merchant_id = kwargs.pop('merchant_id')
         self.public_key = kwargs.pop('public_key')
         self.private_key = kwargs.pop('private_key')
-        self.environment = kwargs.get('environment',
-                                      braintree.Environment.Sandbox)
+        self.environment = kwargs.pop('environment')
 
         braintree.Configuration.configure(self.environment,
                                           merchant_id=self.merchant_id,
@@ -26,13 +25,14 @@ class BraintreeProvider(BasicProvider):
             raise ImproperlyConfigured(
                 'Braintreet does not support pre-authorization.')
 
-    def get_form(self, data=None, *args, **kwargs):
-        kwargs = {
+    def get_form(self, data=None, **kwargs):
+        kwargs.update({
             'data': data,
             'payment': self.payment,
             'provider': self,
             'action': '',
-        }
+            'hidden_inputs': False
+        })
         form = BraintreePaymentForm(**kwargs)
         if form.is_valid():
             form.save()
