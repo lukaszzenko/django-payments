@@ -9,13 +9,14 @@ from .. import BasicProvider, RedirectNeeded
 
 
 class BraintreeProvider(BasicProvider):
-
     def __init__(self, *args, **kwargs):
         self.merchant_id = kwargs.pop('merchant_id')
         self.public_key = kwargs.pop('public_key')
         self.private_key = kwargs.pop('private_key')
+        self.environment = kwargs.get('environment',
+                                      braintree.Environment.Sandbox)
 
-        braintree.Configuration.configure(braintree.Environment.Sandbox,
+        braintree.Configuration.configure(self.environment,
                                           merchant_id=self.merchant_id,
                                           public_key=self.public_key,
                                           private_key=self.private_key)
@@ -25,7 +26,7 @@ class BraintreeProvider(BasicProvider):
             raise ImproperlyConfigured(
                 'Braintreet does not support pre-authorization.')
 
-    def get_form(self, data=None):
+    def get_form(self, data=None, *args, **kwargs):
         kwargs = {
             'data': data,
             'payment': self.payment,
